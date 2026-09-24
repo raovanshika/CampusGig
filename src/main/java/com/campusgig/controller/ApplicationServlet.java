@@ -150,8 +150,7 @@ if (!lowerFileName.endsWith(".pdf")
         }
 
         // Create a unique file name
-        String savedFileName = applicantId + "_" + fileName;
-        File destinationFile = new File(uploadDirectory, savedFileName);
+String savedFileName = applicantId + "_" + System.currentTimeMillis() + "_" + fileName;
 
         // Save the uploaded file
         try (InputStream inputStream = portfolio.getInputStream()) {
