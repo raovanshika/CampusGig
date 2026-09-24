@@ -1,5 +1,11 @@
 package com.campusgig.controller;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
@@ -7,12 +13,6 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Part;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 
 @WebServlet("/apply-gig")
 @MultipartConfig
@@ -138,7 +138,7 @@ public class ApplicationServlet extends HttpServlet {
         }
 
         // Create a unique file name
-        String savedFileName = applicationId + "_" + fileName;
+        String savedFileName = applicantId + "_" + fileName;
         File destinationFile = new File(uploadDirectory, savedFileName);
 
         // Save the uploaded file
