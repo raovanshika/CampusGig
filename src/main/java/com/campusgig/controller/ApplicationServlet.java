@@ -1,7 +1,5 @@
 package com.campusgig.controller;
 
-import java.io.IOException;
-
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
@@ -9,6 +7,12 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Part;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 
 @WebServlet("/apply-gig")
 @MultipartConfig
@@ -38,6 +42,7 @@ public class ApplicationServlet extends HttpServlet {
             if (gigId <= 0) {
                 errors.append("<p>Gig ID must be greater than 0.</p>");
             }
+
         } catch (Exception e) {
             errors.append("<p>Gig ID must be a valid number.</p>");
         }
@@ -49,6 +54,7 @@ public class ApplicationServlet extends HttpServlet {
             if (applicantId <= 0) {
                 errors.append("<p>Applicant ID must be greater than 0.</p>");
             }
+
         } catch (Exception e) {
             errors.append("<p>Applicant ID must be a valid number.</p>");
         }
@@ -63,6 +69,7 @@ public class ApplicationServlet extends HttpServlet {
             errors.append("<p>Portfolio or resume is required.</p>");
         }
 
+        // Stop if validation failed
         if (errors.length() > 0) {
             response.getWriter().println("<h1>Application Failed</h1>");
             response.getWriter().println(errors);
@@ -70,14 +77,86 @@ public class ApplicationServlet extends HttpServlet {
             return;
         }
 
+        // Get uploaded file name
         String fileName = portfolio.getSubmittedFileName();
 
-        // Temporary success response.
-        // Database insertion and file storage will be connected later.
-        response.getWriter().println("<h1>Application Validated Successfully!</h1>");
+        if (fileName == null || fileName.trim().isEmpty()) {
+            response.getWriter().println("<h1>Application Failed</h1>");
+            response.getWriter().println("<p>Portfolio file name is invalid.</p>");
+            response.getWriter().println("<a href='apply-gig.html'>Go Back</a>");
+            return;
+        }
+
+        // Keep only the actual file name
+        fileName = new File(fileName).getName();
+
+        // Read upload configuration from web.xml
+        String uploadDir = getServletContext().getInitParameter("upload.dir");
+        String maxFileSizeText = getServletContext().getInitParameter("max.file.size");
+
+        if (uploadDir == null || uploadDir.trim().isEmpty()) {
+            response.getWriter().println("<h1>Upload Configuration Error</h1>");
+            response.getWriter().println("<p>Upload directory is not configured.</p>");
+            return;
+        }
+
+        long maxFileSize;
+
+        try {
+            maxFileSize = Long.parseLong(maxFileSizeText);
+        } catch (Exception e) {
+            response.getWriter().println("<h1>Upload Configuration Error</h1>");
+            response.getWriter().println("<p>Maximum file size configuration is invalid.</p>");
+            return;
+        }
+
+        // Check file size
+        if (portfolio.getSize() > maxFileSize) {
+            response.getWriter().println("<h1>Application Failed</h1>");
+            response.getWriter().println("<p>Portfolio file is too large.</p>");
+            response.getWriter().println("<p>Maximum allowed size is 5 MB.</p>");
+            response.getWriter().println("<a href='apply-gig.html'>Go Back</a>");
+            return;
+        }
+
+        // Get the deployed application's real path
+        String realPath = getServletContext().getRealPath("/");
+
+        if (realPath == null) {
+            response.getWriter().println("<h1>File Upload Failed</h1>");
+            response.getWriter().println("<p>Server upload path could not be determined.</p>");
+            return;
+        }
+
+        // Create upload directory
+        File uploadDirectory = new File(realPath, uploadDir);
+
+        if (!uploadDirectory.exists() && !uploadDirectory.mkdirs()) {
+            response.getWriter().println("<h1>File Upload Failed</h1>");
+            response.getWriter().println("<p>Could not create upload directory.</p>");
+            return;
+        }
+
+        // Create a unique file name
+        String savedFileName = applicationId + "_" + fileName;
+        File destinationFile = new File(uploadDirectory, savedFileName);
+
+        // Save the uploaded file
+        try (InputStream inputStream = portfolio.getInputStream()) {
+
+            Files.copy(
+                    inputStream,
+                    destinationFile.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING
+            );
+        }
+
+        // Temporary success response
+        // Database insertion will be connected later through ApplicationDAO.
+        response.getWriter().println("<h1>Application Submitted Successfully!</h1>");
         response.getWriter().println("<p>Gig ID: " + gigId + "</p>");
         response.getWriter().println("<p>Applicant ID: " + applicantId + "</p>");
         response.getWriter().println("<p>Pitch: " + pitchText + "</p>");
-        response.getWriter().println("<p>Portfolio file: " + fileName + "</p>");
+        response.getWriter().println("<p>Portfolio file: " + savedFileName + "</p>");
     }
 }
