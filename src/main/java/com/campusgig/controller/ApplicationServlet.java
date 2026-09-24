@@ -89,7 +89,19 @@ public class ApplicationServlet extends HttpServlet {
 
         // Keep only the actual file name
         fileName = new File(fileName).getName();
+// Validate portfolio file type
+String lowerFileName = fileName.toLowerCase();
 
+if (!lowerFileName.endsWith(".pdf")
+        && !lowerFileName.endsWith(".jpg")
+        && !lowerFileName.endsWith(".jpeg")
+        && !lowerFileName.endsWith(".png")) {
+
+    response.getWriter().println("<h1>Application Failed</h1>");
+    response.getWriter().println("<p>Only PDF, JPG, JPEG and PNG files are allowed.</p>");
+    response.getWriter().println("<a href='apply-gig.html'>Go Back</a>");
+    return;
+}
         // Read upload configuration from web.xml
         String uploadDir = getServletContext().getInitParameter("upload.dir");
         String maxFileSizeText = getServletContext().getInitParameter("max.file.size");
